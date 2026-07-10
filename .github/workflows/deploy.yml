@@ -6,37 +6,30 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
-  pages: write
-  id-token: write
-
-concurrency:
-  group: pages
-  cancel-in-progress: true
+  contents: write
 
 jobs:
-  build:
+  build-and-deploy:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: orbitech
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-      - run: npm ci
-      - run: npm run build -- --base=/AIVC-Project-Bootcamp-/
-      - uses: actions/upload-pages-artifact@v3
-        with:
-          path: orbitech/dist
 
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - id: deployment
-        uses: actions/deploy-pages@v4
+      - name: Build
+        working-directory: orbitech
+        run: |
+          npm ci
+          npm run build -- --base=/AIVC-Project-Bootcamp-/
+
+      - name: Publish built site to repo root
+        run: |
+          rm -rf assets index.html
+          cp -r orbitech/dist/* .
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add index.html assets
+          git commit -m "deploy: update GitHub Pages site [skip ci]" || echo "no changes"
+          git push
